@@ -6,6 +6,13 @@ from .forms import SignUpForm, SignInForm, FeedBackForm
 from django.contrib.auth import login, logout, authenticate
 from django.http import HttpResponseRedirect, HttpResponse
 from django.core.mail import send_mail, BadHeaderError
+from dotenv import load_dotenv
+import os
+from django.db.models import Q
+
+
+# environment variables
+load_dotenv()
 
 
 class MainView(View):
@@ -91,7 +98,7 @@ class FeedBackView(View):
             subject = form.cleaned_data['subject']
             message = form.cleaned_data['message']
             try:
-                send_mail(f'From {name} | {subject}', message, from_email, ['takedo19@gmail.com'])
+                send_mail(f'From {name} | {subject}', message, from_email, os.environ['EMAIL_HOST_USER'])
             except BadHeaderError:
                 return HttpResponse('Невалидный заголовок')
             return HttpResponseRedirect('success')
@@ -101,8 +108,28 @@ class FeedBackView(View):
         })
 
 
-class SuccessView(View):
+class SuccessView(View):  # User redirected here, after success FeedBack
+
     def get(self, request, *args, **kwargs):
-        return  render(request, 'myblog/success.html', context={
+        return render(request, 'myblog/success.html', context={
             'title': 'Спасибо'
         })
+
+
+class SearchResultsView(View):
+    def get(self, request, *args, **kwargs):
+        query = self.request.GET.get('q')
+        results = ''
+        if query:
+            results = Post.objects.filter(
+                Q(h1__icontains=query) | Q(content__icontains=query)
+            )
+        paginator = Paginator(results, 6)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        return render(request, 'myblog/search.html', context={
+            'title': 'Поиск',
+            'results': page_obj,
+            'count': paginator.count
+        })
+
