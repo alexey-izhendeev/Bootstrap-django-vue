@@ -1,8 +1,8 @@
 from django.shortcuts import render, get_object_or_404
 from django.views import View
-from .models import Post
+from .models import Post, Comment
 from django.core.paginator import Paginator
-from .forms import SignUpForm, SignInForm, FeedBackForm
+from .forms import SignUpForm, SignInForm, FeedBackForm, CommentForm
 from django.contrib.auth import login, logout, authenticate
 from django.http import HttpResponseRedirect, HttpResponse
 from django.core.mail import send_mail, BadHeaderError
@@ -35,10 +35,24 @@ class PostDetailView(View):
         post = get_object_or_404(Post, url=slug)
         common_tags = Post.tag.most_common()
         last_posts = Post.objects.all().order_by('-id')[:5]
+        comment_form = CommentForm()
         return render(request, 'myblog/post_detail.html', context={
             'post': post,
             'common_tags': common_tags,
             'last_posts': last_posts,
+            'comment_form': comment_form,
+        })
+
+    def post(self, request, slug, *args, **kwargs):
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            text = request.POST['text']
+            username = self.request.user
+            post = get_object_or_404(Post, url=slug)
+            comment = Comment.objects.create(post=post, text=text, username=username)
+            return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/'))
+        return render(request, 'myblog/post_detail.html', context={
+            'comment_form': comment_form,
         })
 
 
@@ -148,4 +162,6 @@ class TagView(View):
             'posts': posts,
             'common_tags': common_tags,
         })
+
+
 
