@@ -1,2 +1,4 @@
 testing.py
 venv
+.idea/
+__pycache__/
